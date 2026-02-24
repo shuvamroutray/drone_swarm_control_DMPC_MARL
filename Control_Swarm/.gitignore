@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# Conda
+.env
+.venv
+
+# Recordings
+recordings/
+*.npz
+
+# OS
+.DS_Store
+Thumbs.db
+
