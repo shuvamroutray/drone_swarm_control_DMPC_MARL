@@ -1,13 +1,15 @@
 from setuptools import setup
 import glob
 import os
+from setuptools import find_packages
 
 package_name = 'control_swarm_ros'
 
 setup(
     name=package_name,
     version='0.0.1',
-    packages=[package_name],
+    
+    packages=find_packages(),
 
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -39,6 +41,12 @@ setup(
             'swarm_central_agent_node = control_swarm_ros.swarm_central_agent_node:main',
             'swarm_decentral_agent_node = control_swarm_ros.swarm_decentral_agent_node:main',
             'swarm_decentral_agent_node_crazy_SIM = control_swarm_ros.swarm_decentral_agent_node_crazy_SIM:main',
+            'simple_hover_test = control_swarm_ros.scripts.real.simple_hover_test:main',
+            'mission_change_midflight_3 = control_swarm_ros.scripts.sim.mission_change_midflight_3:main',
+            'target_switch_midflight_4 = control_swarm_ros.scripts.sim.target_switch_midflight_4:main',
+            'two_agents_cross_1 = control_swarm_ros.scripts.sim.two_agents_cross_1:main',
+            'four_agent_cross_2 = control_swarm_ros.scripts.sim.four_agent_cross_2:main',
+
         ],
     },
 )

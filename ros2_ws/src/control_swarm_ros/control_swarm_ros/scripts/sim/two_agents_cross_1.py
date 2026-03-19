@@ -2,15 +2,15 @@
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray, Empty
 from crazyflie_interfaces.msg import FullState
+from crazyflie_interfaces.srv import Takeoff
+from visualization_msgs.msg import Marker
 
 import numpy as np
 import time
 
 from tf2_ros import Buffer, TransformListener
-
 from control_swarm.controllers.dmpc_gym.DMPCControl import DMPCControl
 
 
@@ -26,20 +26,26 @@ class DMPCAgent(Node):
         self.declare_parameter("neighbor_names", [""])
         self.declare_parameter("num_drones", 1)
         self.declare_parameter("Np", 10)
-        self.declare_parameter("dt", 1.0/30.0)
+        self.declare_parameter("dt", 0.1)
         self.declare_parameter("target", [0.0, 1.0, 1.0])
 
         self.drone_name = self.get_parameter("drone_name").value
         self.neighbor_names = self.get_parameter("neighbor_names").value
+        if self.neighbor_names == [""]:
+            self.neighbor_names = []
+
         self.num_drones = self.get_parameter("num_drones").value
         self.Np = self.get_parameter("Np").value
         self.dt = self.get_parameter("dt").value
+
         self.target = np.array(
             self.get_parameter("target").value,
             dtype=float
         )
 
-        # Controller limits
+        # ============================================================
+        # CONTROLLER LIMITS
+        # ============================================================
         self.MAX_ACC = 3.0
         self.MAX_VEL = 1.5
         self.D_SAFE = 0.4
@@ -50,14 +56,21 @@ class DMPCAgent(Node):
         self.state = np.zeros(6)
         self.last_pos = None
 
-        # Neighbor predicted trajectories (name-based)
         self.neighbor_predictions = {
             name: np.zeros(6 * (self.Np + 1))
             for name in self.neighbor_names
         }
 
         # ============================================================
-        # TF LISTENER (Crazyswarm2 uses TF)
+        # LOGGING STORAGE
+        # ============================================================
+        self.start_time = self.get_clock().now().nanoseconds * 1e-9
+        self.time_log = []
+        self.tracking_error_log = []
+        self.inter_drone_log = []
+
+        # ============================================================
+        # TF LISTENER
         # ============================================================
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -66,7 +79,7 @@ class DMPCAgent(Node):
         # DMPC CONTROLLER
         # ============================================================
         self.controller = DMPCControl(
-            drone_id=0,  # only used internally/logging
+            drone_id=0,
             Np=self.Np,
             dt=self.dt,
             target_pos=self.target,
@@ -79,32 +92,30 @@ class DMPCAgent(Node):
         # ============================================================
         # PUBLISHERS
         # ============================================================
-
-        # # Position setpoint (relative to namespace)
-        # self.cmd_pub = self.create_publisher(
-        #     Twist,
-        #     'cmd_position',
-        #     10
-        # )
-
         self.cmd_pub = self.create_publisher(
             FullState,
             'cmd_full_state',
             10
         )
 
+        self.target_pub = self.create_publisher(
+            Marker,
+            'target_marker',
+            10
+        )
 
-
-        # Takeoff / Land
-        self.takeoff_pub = self.create_publisher(Empty, 'takeoff', 10)
-        self.land_pub = self.create_publisher(Empty, 'land', 10)
-
-        # Prediction sharing
         self.pred_pub = self.create_publisher(
             Float64MultiArray,
             'prediction',
             10
         )
+
+        self.takeoff_client = self.create_client(
+            Takeoff,
+            'takeoff'
+        )
+
+        self.land_pub = self.create_publisher(Empty, 'land', 10)
 
         # ============================================================
         # NEIGHBOR SUBSCRIPTIONS
@@ -125,13 +136,17 @@ class DMPCAgent(Node):
         time.sleep(2.0)
 
         self.get_logger().info(f"[{self.drone_name}] Taking off...")
-        self.takeoff_pub.publish(Empty())
+        req = Takeoff.Request()
+        req.height = 1.0
+        req.duration.sec = 2
+        self.takeoff_client.call_async(req)
         time.sleep(3.0)
 
         # ============================================================
-        # CONTROL TIMER
+        # TIMERS
         # ============================================================
-        self.timer = self.create_timer(self.dt, self.control_loop)
+        self.create_timer(self.dt, self.control_loop)
+        self.create_timer(0.5, self.publish_target_marker)
 
         self.get_logger().info(
             f"DMPC Agent for {self.drone_name} started. "
@@ -142,7 +157,6 @@ class DMPCAgent(Node):
     # TF STATE UPDATE
     # ============================================================
     def update_state_from_tf(self):
-
         try:
             trans = self.tf_buffer.lookup_transform(
                 'world',
@@ -164,10 +178,8 @@ class DMPCAgent(Node):
             self.last_pos = np.array([px, py, pz])
             self.state = np.array([px, py, pz, vx, vy, vz])
 
-        except Exception as e:
-            self.get_logger().warn(
-                f"[{self.drone_name}] TF lookup failed: {e}"
-            )
+        except Exception:
+            pass
 
     # ============================================================
     # NEIGHBOR CALLBACK
@@ -180,10 +192,8 @@ class DMPCAgent(Node):
     # ============================================================
     def control_loop(self):
 
-        # Update own state
         self.update_state_from_tf()
 
-        # Stack neighbor trajectories
         if self.neighbor_names:
             neighbors = np.hstack([
                 self.neighbor_predictions[name]
@@ -192,60 +202,117 @@ class DMPCAgent(Node):
         else:
             neighbors = np.array([])
 
-        # Solve DMPC
-        u = self.controller.compute_control(self.state, neighbors)
+        self.controller.compute_control(self.state, neighbors)
         pred = self.controller.predicted_trajectory
 
-        # Use next predicted position
         target_pos = pred[1, 0:3]
 
-        #***********************************************
-        # Send position command
-        #************************************************
-        # msg = Twist()
-        # msg.linear.x = float(target_pos[0])
-        # msg.linear.y = float(target_pos[1])
-        # msg.linear.z = float(target_pos[2])
-        # self.cmd_pub.publish(msg)
-
         msg = FullState()
-
-        # Position
         msg.pose.position.x = float(target_pos[0])
         msg.pose.position.y = float(target_pos[1])
         msg.pose.position.z = float(target_pos[2])
-
-        # Velocity (use predicted next velocity if available)
         msg.twist.linear.x = float(pred[1, 3])
         msg.twist.linear.y = float(pred[1, 4])
         msg.twist.linear.z = float(pred[1, 5])
-
-        # Zero angular stuff for now
         msg.pose.orientation.w = 1.0
-        msg.twist.angular.x = 0.0
-        msg.twist.angular.y = 0.0
-        msg.twist.angular.z = 0.0
 
         self.cmd_pub.publish(msg)
 
-
-
-        
-
-        # Publish predicted trajectory
         pred_msg = Float64MultiArray()
         pred_msg.data = pred.flatten().tolist()
         self.pred_pub.publish(pred_msg)
 
+        # ================= METRICS =================
+        current_time = self.get_clock().now().nanoseconds * 1e-9
+        elapsed = current_time - self.start_time
+
+        tracking_error = np.linalg.norm(self.state[0:3] - self.target)
+
+        if self.neighbor_names:
+            try:
+                trans_n = self.tf_buffer.lookup_transform(
+                    'world',
+                    self.neighbor_names[0],
+                    rclpy.time.Time()
+                )
+                neighbor_pos = np.array([
+                    trans_n.transform.translation.x,
+                    trans_n.transform.translation.y,
+                    trans_n.transform.translation.z
+                ])
+                inter_dist = np.linalg.norm(self.state[0:3] - neighbor_pos)
+            except:
+                inter_dist = np.nan
+        else:
+            inter_dist = np.nan
+
+        self.time_log.append(elapsed)
+        self.tracking_error_log.append(tracking_error)
+        self.inter_drone_log.append(inter_dist)
+
+    # ============================================================
+    # TARGET MARKER
+    # ============================================================
+    def publish_target_marker(self):
+        marker = Marker()
+        marker.header.frame_id = "world"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "target"
+        marker.id = 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+
+        marker.pose.position.x = float(self.target[0])
+        marker.pose.position.y = float(self.target[1])
+        marker.pose.position.z = float(self.target[2])
+        marker.pose.orientation.w = 1.0
+
+        marker.scale.x = 0.2
+        marker.scale.y = 0.2
+        marker.scale.z = 0.2
+
+        marker.color.a = 1.0
+
+        if "231" in self.drone_name:
+            marker.color.r = 1.0
+        elif "232" in self.drone_name:
+            marker.color.g = 1.0
+        else:
+            marker.color.b = 1.0
+
+        self.target_pub.publish(marker)
+
+    # ============================================================
+    # SAVE LOGS
+    # ============================================================
+    def save_logs(self):
+
+        if len(self.time_log) == 0:
+            return
+
+        data = np.vstack([
+            self.time_log,
+            self.tracking_error_log,
+            self.inter_drone_log
+        ]).T
+
+        filename = f"{self.drone_name}_metrics.npy"
+        np.save(filename, data)
+
         self.get_logger().info(
-            f"[{self.drone_name}] Pos: {np.round(self.state[:3],2)} "
-            f"→ Cmd: {np.round(target_pos,2)}"
+            f"[{self.drone_name}] Metrics saved to {filename}"
         )
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = DMPCAgent()
-    rclpy.spin(node)
+
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+
+    node.save_logs()
     node.destroy_node()
     rclpy.shutdown()

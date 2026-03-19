@@ -2,6 +2,12 @@
 ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
+build/
+install/
+log/
+
+# ================= ROS Bags =================
+*.db3
 
 # ================= Python =================
 __pycache__/
@@ -9,8 +15,11 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
-build/
 dist/
+
+# ================= Python Env =================
+.venv/
+env/
 
 # ================= Recordings =================
 *.npz
@@ -22,7 +31,19 @@ recordings/
 
 # ================= VSCode =================
 .vscode/
+*.swp
 
 # ================= Linux =================
 *.swp
 .DS_Store
+
+# ================= Results =================
+MTP2_Minor_Results/
+*.png
+*.webm
+*.npy
+*.csv
+
+# ================= Temporary / backups =================
+*~
+*.bak
