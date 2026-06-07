@@ -1,0 +1,14 @@
+THESIS_VERSION_1
+scenario_seed=75
+drone=cf231
+solve_count=48
+avg_solve_ms=170.3833
+max_solve_ms=205.5740
+min_solve_ms=142.8011
+total_optimization_time_ms=8178.3966
+path_length=2.1920
+min_separation=0.1752
+mission_time=21.2523
+replans_per_second=2.2586
+goal_x=-1.1468
+goal_y=-1.3875

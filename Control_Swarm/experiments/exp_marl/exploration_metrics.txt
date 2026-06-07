@@ -1,0 +1,4 @@
+Mean T100: 32.8900
+Std T100: 18.8313
+Mean Redundancy: 38.1359
+Mean Agent Separation: 4.5336

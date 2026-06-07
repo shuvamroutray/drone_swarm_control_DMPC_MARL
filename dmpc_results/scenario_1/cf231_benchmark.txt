@@ -1,0 +1,14 @@
+THESIS_VERSION_2:PeriodicDMPC
+scenario_seed=1
+drone=cf231
+solve_count=1153
+avg_solve_ms=98.2165
+max_solve_ms=162.4047
+min_solve_ms=83.8865
+total_optimization_time_ms=113243.6120
+path_length=0.6055
+min_separation=1.5213
+mission_time=120.2343
+replans_per_second=9.5896
+goal_x=0.0473
+goal_y=1.8019

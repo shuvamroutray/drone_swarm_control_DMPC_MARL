@@ -1,0 +1,42 @@
+DMPC EVENT-TRIGGERED ANALYSIS
+
+Expected Runs: 200
+Successful Runs: 177
+Success Rate: 88.50%
+
+mission_time
+Mean=31.4367
+Std=25.8725
+Min=7.8090
+Max=120.7480
+
+solve_count
+Mean=96.0621
+Std=151.4763
+Min=3.0000
+Max=789.0000
+
+avg_solve_ms
+Mean=143.2367
+Std=21.8630
+Min=98.0080
+Max=180.6770
+
+total_optimization_time_ms
+Mean=14186.6438
+Std=22702.3164
+Min=352.2851
+Max=98960.1201
+
+path_length
+Mean=2.2869
+Std=0.9361
+Min=0.1031
+Max=4.9485
+
+min_separation
+Mean=0.4526
+Std=0.3639
+Min=0.0546
+Max=1.4913
+

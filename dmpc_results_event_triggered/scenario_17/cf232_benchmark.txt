@@ -1,0 +1,14 @@
+THESIS_VERSION_1
+scenario_seed=17
+drone=cf232
+solve_count=62
+avg_solve_ms=119.4850
+max_solve_ms=183.0599
+min_solve_ms=100.1468
+total_optimization_time_ms=7408.0682
+path_length=2.0246
+min_separation=1.0992
+mission_time=31.2222
+replans_per_second=1.9858
+goal_x=0.2310
+goal_y=-0.5277

@@ -21,6 +21,10 @@ setup(
         (os.path.join('share', package_name, 'launch'),
             glob.glob('launch/*.launch.py')),
 
+        # INSTALL CONFIG FILES (🔥 THIS WAS MISSING)
+        (os.path.join('share', package_name, 'config'),
+            glob.glob('config/*.yaml')),
+
         # Install models
         (os.path.join('share', package_name, 'models'),
             glob.glob('models/*.sdf')),
@@ -46,6 +50,14 @@ setup(
             'target_switch_midflight_4 = control_swarm_ros.scripts.sim.target_switch_midflight_4:main',
             'two_agents_cross_1 = control_swarm_ros.scripts.sim.two_agents_cross_1:main',
             'four_agent_cross_2 = control_swarm_ros.scripts.sim.four_agent_cross_2:main',
+            'swarm_node_crazy_SIM_MARL_EventTrigger = control_swarm_ros.Scripts_MARL_DMPC.swarm_node_crazy_SIM_MARL_EventTrigger:main',
+            'marl_decentral_agent_node = control_swarm_ros.Scripts_MARL_DMPC.marl_decentral_agent_node:main',
+            'swarm_node_crazy_SIM_MARL_EventTrigger_test = control_swarm_ros.Scripts_MARL_DMPC.swarm_node_crazy_SIM_MARL_EventTrigger_test:main',
+            'swarm_node_crazy_SIM_MARL_EventTrigger_4a_ThesisResults = control_swarm_ros.Scripts_MARL_DMPC.swarm_node_crazy_SIM_MARL_EventTrigger_4a_ThesisResults:main',
+            'dmpc_benchmark_manager_ThesisResults = control_swarm_ros.Scripts_MARL_DMPC.dmpc_benchmark_manager_ThesisResults:main',
+            'swarm_node_crazy_SIM_MARL_EventTrigger_4b_ThesisResults = control_swarm_ros.Scripts_MARL_DMPC.swarm_node_crazy_SIM_MARL_EventTrigger_4b_ThesisResults:main',
+            'swarm_node_crazy_SIM_MARL_PeriodicTrigger_4c_ThesisResults = control_swarm_ros.Scripts_MARL_DMPC.swarm_node_crazy_SIM_MARL_PeriodicTrigger_4c_ThesisResults:main',
+
 
         ],
     },
